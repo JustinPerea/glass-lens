@@ -1,0 +1,36 @@
+{
+  "name": "glass-lens",
+  "version": "0.1.0",
+  "description": "Liquid glass shapes over an image, video or canvas, rendered with WebGL2. No dependencies.",
+  "type": "module",
+  "main": "./src/index.js",
+  "module": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./react": "./src/react.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "test": "node test/shader-identity.mjs && node test/unit.mjs",
+    "check:pixels": "node test/pixels.mjs",
+    "check:pack": "node test/pack.mjs",
+    "demo": "node scripts/serve.mjs"
+  },
+  "peerDependencies": {
+    "react": ">=17"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "keywords": ["liquid glass", "webgl2", "glass", "refraction", "shader"],
+  "license": "MIT"
+}

@@ -1,0 +1,30 @@
+{
+  "source": "Lab 03 \"Liquid glass\", good-machines commit 4686091, site/lab/liquid-glass/index.html",
+  "fileSha256": "52773bbe49a5e20145bb0724df06d98d38bd18ee2dfc7a98b2b4b49b4f82c6ca",
+  "lines": 4407,
+  "omitted": {
+    "LABEL_VERT": "labels (icons and text on the glass) are left out",
+    "LABEL": "labels are left out",
+    "REF": "the compare tool is left out"
+  },
+  "constants": {
+    "MAX_SHAPES": 8,
+    "UI_MAX": 6
+  },
+  "raw": {
+    "VERT": "c3b9e50cba634644cfaaa56cf5538bd3c9e4e376196879e898be2f3a0d3f9c87",
+    "COVER": "8d097deda9f1c15d0a66f7a7eea87a7d3654bf44e544df38f440956c3e663da9",
+    "BLUR": "ac499d2ee81019ad14d59ccad8c1182f49a085abe56742ca148843c1891c9466",
+    "GLASS": "1efc3703f81b06085ff8b42571554aeb3ce24ed955a956dd9207bd440b8ca3b0"
+  },
+  "compiled": {
+    "VERT": "c3b9e50cba634644cfaaa56cf5538bd3c9e4e376196879e898be2f3a0d3f9c87",
+    "COVER": "f8bee9bcfa46e9cf835d917afd6ed957670ccfa804fd559646e24c9edd090316",
+    "BLUR": "ac499d2ee81019ad14d59ccad8c1182f49a085abe56742ca148843c1891c9466",
+    "GLASS": "50efd52277b63a7ba13a1bd22b5b7b43628216af14462162d64c0e4269991667"
+  },
+  "data": {
+    "PARAMS": "f0b4f6b49ce88e87f05cca0e357a9f42ddb59beeaf80241e1999a0a1e3d3226c",
+    "PRESETS": "ca85f5acaa94f8e44b8f53c3aba96bfbcb81108c1c643c5e4111df99af569ce9"
+  }
+}
