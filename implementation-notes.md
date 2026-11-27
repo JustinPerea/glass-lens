@@ -35,7 +35,7 @@ Source: Lab 03 "Liquid glass", good-machines commit 4686091, `site/lab/liquid-gl
 - **GIF decoder and animated images**: left out. A GIF or WebP passed as an `<img>` shows its first frame.
 - **Hands-free motion** (scroll, glide), **phone tilt**, **light drift**, **velocity stretch**: they need a frame loop and input the renderer doesn't own.
 - **Adaptive render scale**: it judges frame times from a rAF loop the lab owned. `render()` here is on demand and always full resolution. A caller with a slow GPU and a moving source pays full cost every frame; adding it back would mean the package running its own loop or taking frame times from the caller.
-- **CSS backdrop-filter fallback**: the lab's version is about 35 lines of renderer, but it depends on a DOM world layer holding an `<img>` or the `<video>` behind the shapes, which a canvas-only API doesn't have. Porting it means an API that owns a container element, not a canvas, so it came to well over 60 lines. Without WebGL2, `createGlass` throws an Error with `code: 'ERR_NO_WEBGL2'`, and `isSupported()` checks first.
+- **CSS backdrop-filter fallback**: not attempted. The lab's version is about 35 lines of renderer, but it paints `<div>`s with `backdrop-filter` over a DOM layer holding an `<img>` or the `<video>`, so it needs an API that owns a container element rather than a canvas. That is a different API, not a port. Without WebGL2, `createGlass` throws an Error with `code: 'ERR_NO_WEBGL2'`, and `isSupported()` checks first.
 - **Analytics, Google Fonts, `/assets/site.css`, the favicon, all sample photos and videos**: not used. The demo and the test fixture draw their images in canvas with `system-ui`.
 
 ## Decisions not in the brief
@@ -63,16 +63,18 @@ Source: Lab 03 "Liquid glass", good-machines commit 4686091, `site/lab/liquid-gl
 | frosted with the Lip edge, DPR 2 | 924 × 736 | 1848 × 1472 | 0 | 0 | 0% |
 | prism, DPR 2 | 924 × 736 | 1848 × 1472 | 0 | 0 | 0% |
 | apple, DPR 1.5, 1111 × 777 viewport | 755 × 713 | 1133 × 1070 | 0 | 0 | 0% |
+| apple, card pressed (`glassLab.press(0)`), circle with its own frosted material, DPR 2 | 924 × 736 | 1848 × 1472 | 0 | 0 | 0% |
 
 Guards that ran with each scene: the glass changes 15.6 to 19.9% of the frame against a no-shape render; 0.5 px more refraction in the package alone changes 0.58 to 1.70% of pixels (so a real difference shows); the Apple scenes have a dark shape and light ones (tones 0, 0, 1, 0); the package in a blank page, after destroy and re-create on one canvas, and after a lost and restored context renders the same hash as in the lab page.
 
-**Other checks**: `check:demo` (renders, background moves, the card drags to within 2 px of its target on the move spring, Save PNG gives a PNG, a picked image and a video recorded in the page both work, no page errors); `check:react` (React 18.3.1 StrictMode: one canvas, the ref is the renderer, new props redraw, `toBlob` through the ref, unmount clears the ref, no console errors or warnings); `check:pack` (the tarball installs in a fresh directory next to react@18.3.1 and react-dom@18.3.1, both entry points import, `GlassCanvas` server-renders a `<canvas>`).
+**Other checks**: `check:demo` (the README's quick start with an `<img>` still loading, an `OffscreenCanvas` source; the demo renders, background moves, the card drags to within 2 px of its target on the move spring, Save PNG gives a PNG, a picked image and a video recorded in the page both work, no page errors); `check:react` (React 18.3.1 StrictMode: one canvas, the ref is the renderer, new props redraw, `toBlob` through the ref, unmount clears the ref, no console errors or warnings); `check:pack` (the tarball installs in a fresh directory next to react@18.3.1 and react-dom@18.3.1, both entry points import, `GlassCanvas` server-renders a `<canvas>`).
 
 ## Not verified
 
 - Any browser other than headless Chrome 158 on macOS, any other GPU, any phone.
 - The lab's exact Type sample in the pixel check: it uses Figtree from Google Fonts, which the check blocks, so the fixture is a separate canvas drawing.
-- Sources larger than 4096 px through the scaled path, and `OffscreenCanvas` sources.
+- Sources larger than 4096 px through the scaled path.
+- A shape's `tone` override and `appear` below 1 (both are plain uniform values, but no check sets them).
 - React 19, and the React wrapper's `ResizeObserver` resizing.
 - Performance: no frame timing was measured. A live source rebuilds the scene cache and pyramid on every render, as in the lab.
 - React Native and Expo (the README lists routes, untried). expo-gl facts in the README come from Expo's GLView docs (docs.expo.dev/versions/latest/sdk/gl-view, read 2026-11-27).

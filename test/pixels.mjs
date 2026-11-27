@@ -57,10 +57,11 @@ const SCENES = [
   { name: 'frosted with the Lip edge, DPR 2', dpr: 2, material: { preset: 'frosted', edge: 'lip' } },
   { name: 'prism, DPR 2', dpr: 2, material: 'prism' },
   { name: 'apple, DPR 1.5, odd viewport', dpr: 1.5, material: 'apple', viewport: [1111, 777] },
+  { name: 'apple, card pressed, circle with its own frosted material, DPR 2', dpr: 2, material: 'apple', press: 0, own: [2, 'frosted'] },
 ];
 
 // Runs in the page. Helpers are defined inside so puppeteer can serialize them.
-async function inLab({ material, shapes }) {
+async function inLab({ material, shapes, press, own }) {
   const read = cv => { const g = cv.getContext('webgl2'), px = new Uint8Array(cv.width * cv.height * 4); g.bindFramebuffer(g.FRAMEBUFFER, null); g.readPixels(0, 0, cv.width, cv.height, g.RGBA, g.UNSIGNED_BYTE, px); return px; };
   const hex = async px => [...new Uint8Array(await crypto.subtle.digest('SHA-256', px))].map(b => b.toString(16).padStart(2, '0')).join('');
   const { drawFixture } = await import('/test/fixture.js');
@@ -79,13 +80,16 @@ async function inLab({ material, shapes }) {
   const p = G.resolveMaterial(material);
   const snap = lab.snapshot();
   snap.m = { preset: typeof material === 'string' ? material : material.preset, edited: typeof material !== 'string', p };
-  snap.s = S.map((o, i) => ({ id: 9001 + i, k: o.k, x: o.fx, y: o.fy, w: o.w, h: o.k === 'circle' ? o.w : o.h, r: o.r ?? 24, l: null, m: null, ro: null }));
+  const ownMat = own && Object.fromEntries(G.MAT_KEYS.map(k => [k, G.resolveMaterial(own[1])[k]]));
+  snap.s = S.map((o, i) => ({ id: 9001 + i, k: o.k, x: o.fx, y: o.fy, w: o.w, h: o.k === 'circle' ? o.w : o.h, r: o.r ?? 24, l: null,
+    m: own && own[0] === i ? { preset: own[1], edited: false, p: ownMat } : null, ro: null }));
   snap.l = 'empty'; snap.sel = -1; snap.d = null;
   lab.restore(snap, { animate: false, view: false });
   lab.resetView();
+  if (press != null) lab.press(press);
   lab.advance(10);
   const geom = lab.geom;
-  if (geom.some(g => g.appear !== 1 || g.press !== 0)) throw new Error('lab glass not settled: ' + JSON.stringify(geom.map(g => [g.appear, g.press])));
+  if (geom.some((g, i) => g.appear !== 1 || Math.abs(g.press - (i === press ? 1 : 0)) > 1e-9)) throw new Error('lab glass not settled: ' + JSON.stringify(geom.map(g => [g.appear, g.press])));
   const labTones = lab.shapes.map(s => s.tone.x), labMean = lab.meanLum, labFrame = lab.frame, auto = p.appearance === 'auto';
 
   const cv = document.createElement('canvas');
@@ -94,7 +98,8 @@ async function inLab({ material, shapes }) {
   const glass = G.createGlass(cv, { width: W, height: H, material });
   const bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' });
   await glass.setSource(bmp); bmp.close();
-  const pkgShapes = S.map(o => ({ kind: o.k, x: o.fx * W, y: o.fy * H, w: o.w, h: o.k === 'circle' ? o.w : o.h, r: o.r ?? 24 }));
+  const pkgShapes = S.map((o, i) => ({ kind: o.k, x: o.fx * W, y: o.fy * H, w: o.w, h: o.k === 'circle' ? o.w : o.h, r: o.r ?? 24,
+    ...(i === press ? { press: geom[i].press } : {}), ...(own && own[0] === i ? { material: own[1] } : {}) }));
   glass.setShapes(pkgShapes);
 
   // The lab renders (advance(0) steps nothing, then draws), and both are read in this task.
@@ -180,7 +185,7 @@ try {
     page.on('pageerror', e => errors.push(String(e)));
     await page.goto(`${base}/lab/${labHtml.split('/').pop()}`, { waitUntil: 'load' });
     await page.waitForFunction(() => !!window.glassLab, { timeout: 15000 });
-    const r = await page.evaluate(inLab, { material: sc.material, shapes: SHAPES });
+    const r = await page.evaluate(inLab, { material: sc.material, shapes: SHAPES, press: sc.press, own: sc.own });
     const page2 = await browser.newPage();
     await page2.setViewport({ width: sc.viewport?.[0] ?? 1280, height: sc.viewport?.[1] ?? 800, deviceScaleFactor: sc.dpr });
     await page2.goto(`${base}/test/blank.html`, { waitUntil: 'load' });

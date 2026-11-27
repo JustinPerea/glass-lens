@@ -77,6 +77,25 @@ try {
   });
   if (vid.skipped) console.log('skip video: ' + vid.skipped);
   else check('a playing video source updates the frame', vid.live && vid.source.join() === '320,240' && vid.changed);
+  // The README's quick start: an <img> still loading is awaited; then an OffscreenCanvas source.
+  const qs = await page.evaluate(async () => {
+    const { createGlass } = await import('/src/index.js');
+    const c = document.createElement('canvas'); c.style.cssText = 'width:600px;height:400px;position:fixed;left:0;top:0;opacity:0'; document.body.appendChild(c);
+    const glass = createGlass(c);
+    const d = document.createElement('canvas'); d.width = 640; d.height = 480; const x = d.getContext('2d'); x.fillStyle = '#204060'; x.fillRect(0, 0, 640, 480);
+    const img = new Image(); img.src = d.toDataURL('image/png');
+    const completeBefore = img.complete && img.naturalWidth > 0;
+    await glass.setSource(img);
+    glass.setShapes([{ kind: 'rect', x: 300, y: 200, w: 320, h: 200, r: 34 }, { kind: 'capsule', x: 300, y: 360, w: 220, h: 58 }, { kind: 'circle', x: 460, y: 360, w: 58 }]);
+    glass.setMaterial('apple');
+    const drew = glass.render(), imgSrc = glass.info.source.join();
+    const off = new OffscreenCanvas(300, 200); const ox = off.getContext('2d'); ox.fillStyle = '#e8593c'; ox.fillRect(0, 0, 300, 200);
+    await glass.setSource(off); const offDrew = glass.render(), offSrc = glass.info.source.join();
+    glass.destroy(); c.remove();
+    return { completeBefore, drew, imgSrc, offDrew, offSrc };
+  });
+  check('quick start: a loading <img> is awaited and drawn', !qs.completeBefore && qs.drew && qs.imgSrc === '640,480');
+  check('an OffscreenCanvas source draws', qs.offDrew && qs.offSrc === '300,200');
   check('no page errors', errors.length === 0, errors.join(' | '));
 } finally {
   await close(browser); child.kill(); rmSync(tmp, { recursive: true, force: true });
