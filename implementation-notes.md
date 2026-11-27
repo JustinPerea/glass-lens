@@ -2,13 +2,13 @@
 
 Source: Lab 03 "Liquid glass", good-machines commit 4686091, `site/lab/liquid-glass/index.html` (4,406 lines, sha256 in `test/lab-reference.json`). Worked from a copy of the live page; the good-machines checkout was not touched.
 
-## What was lifted, and how
+## What was lifted
 
 - The shader strings (`VERT`, `COVER`, `BLUR`, `GLASS`), `UI_MAX`, the `PARAMS` table (with its comments), `GROUPS`, `DEF`, `SCENE_KEYS`, `MAT_KEYS` and `PRESETS` were cut out of the lab file by line range with a script, not retyped. `src/shaders.js` and `src/params.js` hold them; `MAX_SHAPES = 8` became an export so the `GLASS` template interpolates it as before.
 - The `Spring` class was cut the same way into `src/springs.js`.
 - The JS around the shaders (`compile`, `rtex`, `drawTo`, `pass`, `uploadImage`, `coverFit`, `ensureCache`, `buildCache`, `buildPyramid`, `drawGlass`, `buildLum`, `lumRect`, `lumUnder`, `measureTones`, `useSource`, `uploadVideo`, `coerce`) was copied and kept as close to the lab text as the API allowed, inside `createGlass`. Comments marked `lab:` in `src/glass.js` mark each change.
 
-## Changes to lifted JS, and why
+## Changes to lifted JS
 
 | Where | Change | Why |
 |---|---|---|
@@ -27,7 +27,7 @@ Source: Lab 03 "Liquid glass", good-machines commit 4686091, `site/lab/liquid-gl
 | `initGL` | No label or compare programs | Labels and the compare tool are left out |
 | Context loss | `preventDefault` on loss; on restore, rebuild programs, targets and the source texture | The lab showed a toast and asked for a reload. Tested with `WEBGL_lose_context` in check:pixels |
 
-## Left out, and why
+## Left out
 
 - **Editor UI**: the panel, preset chips and visual previews, links (`#s=`), undo and redo, the compare tool, the recorder, the phone sheet, the shape toolbar, focus mode, the site nav. These belong to the lab page.
 - **Interactive layouts** (Morph, iOS controls) and the underlay: demo layouts.
@@ -65,9 +65,9 @@ Source: Lab 03 "Liquid glass", good-machines commit 4686091, `site/lab/liquid-gl
 | apple, DPR 1.5, 1111 × 777 viewport | 755 × 713 | 1133 × 1070 | 0 | 0 | 0% |
 | apple, card pressed (`glassLab.press(0)`), circle with its own frosted material, DPR 2 | 924 × 736 | 1848 × 1472 | 0 | 0 | 0% |
 
-Guards that ran with each scene: the glass changes 15.6 to 19.9% of the frame against a no-shape render; 0.5 px more refraction in the package alone changes 0.58 to 1.70% of pixels (so a real difference shows); the Apple scenes have a dark shape and light ones (tones 0, 0, 1, 0); the package in a blank page, after destroy and re-create on one canvas, and after a lost and restored context renders the same hash as in the lab page.
+Guards that ran with each scene: the glass changes 15.6 to 19.9% of the frame against a no-shape render; 0.5 px more refraction in the package alone changes 0.58 to 1.70% of pixels; the Apple scenes have a dark shape and light ones (tones 0, 0, 1, 0); the package in a blank page, after destroy and re-create on one canvas, and after a lost and restored context renders the same hash as in the lab page.
 
-**Other checks**: `check:demo` (the README's quick start with an `<img>` still loading, an `OffscreenCanvas` source; the demo renders, background moves, the card drags to within 2 px of its target on the move spring, Save PNG gives a PNG, a picked image and a video recorded in the page both work, no page errors); `check:react` (React 18.3.1 StrictMode: one canvas, the ref is the renderer, new props redraw, `toBlob` through the ref, unmount clears the ref, no console errors or warnings); `check:pack` (the tarball installs in a fresh directory next to react@18.3.1 and react-dom@18.3.1, both entry points import, `GlassCanvas` server-renders a `<canvas>`).
+**Other checks**: `check:demo` (the README's quick start with an `<img>` still loading, an `OffscreenCanvas` source; the demo renders, background moves, the card drags to within 2 px of its target on the move spring, Save PNG gives a PNG, a picked image and a video recorded in the page both work, no page errors); `check:react` (React 18.3.1 StrictMode: one canvas, the ref is the renderer, new props redraw, `toBlob` through the ref, unmount clears the ref, no console errors or warnings); `check:pack` (the tarball installs in a fresh directory next to react@18.3.1 and react-dom@18.3.1, both entry points import, `GlassCanvas` server-renders a `<canvas>`). A `git+file://` install of the committed repo also imported both entry points, which stands in for the README's git URL; no install from a hosted git URL was run, since no remote exists yet.
 
 ## Not verified
 
