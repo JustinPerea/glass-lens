@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>glass-lens demo</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f4f1e9; --fg: #1d1d1f; --muted: #5f5a52; --line: #d9d4c9; --btn: #fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #141516; --fg: #f5f5f7; --muted: #a7a39b; --line: #2c2e30; --btn: #1f2122; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--fg); }
+  main { max-width: 1040px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  p { margin: 0 0 16px; color: var(--muted); }
+  #stage { position: relative; width: 100%; aspect-ratio: 16 / 10; border-radius: 14px; overflow: hidden; background: #ddd; touch-action: none; }
+  #stage canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+  #stage canvas:active { cursor: grabbing; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 14px; }
+  label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+  select, button, .file { font: inherit; color: var(--fg); background: var(--btn); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; }
+  button, .file { cursor: pointer; }
+  .file input { display: none; }
+  #msg { margin-top: 12px; min-height: 1.4em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>glass-lens</h1>
+  <p>Glass shapes over a background drawn in canvas. Drag the card. Pick your own image or video below; it stays in this tab.</p>
+  <div id="stage"><canvas id="glass" aria-label="Glass shapes over a moving background. Drag the card to move it."></canvas></div>
+  <div class="bar">
+    <label>Background
+      <select id="bg">
+        <option value="moving">Moving gradient and type</option>
+        <option value="type">Type, still</option>
+      </select>
+    </label>
+    <label class="file">Your image or video<input id="file" type="file" accept="image/*,video/*"></label>
+    <label>Material <select id="preset"></select></label>
+    <button id="save" type="button">Save PNG</button>
+  </div>
+  <div id="msg" role="status"></div>
+</main>
+<script type="module">
+import { createGlass, isSupported, PRESETS, Spring, SPRINGS, SPRINGS_REDUCED } from '../src/index.js';
+
+const $ = id => document.getElementById(id);
+const canvas = $('glass'), stage = $('stage'), msg = $('msg');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+const say = t => { msg.textContent = t; };
+
+if (!isSupported()) {
+  say('This browser has no WebGL2, so the glass can’t render here.');
+  throw new Error('no WebGL2');
+}
+const glass = createGlass(canvas);
+
+// ---- Background, drawn in canvas: a slow gradient and a type specimen ----
+const bg = document.createElement('canvas');
+bg.width = 1600; bg.height = 1000;
+const bx = bg.getContext('2d');
+function drawBackground(t) {
+  const w = bg.width, h = bg.height;
+  bx.fillStyle = '#f4f1e9'; bx.fillRect(0, 0, w, h);
+  const blobs = [['#e8593c', 0.25, 0.3, 0.42, 0.0], ['#3c7fe8', 0.75, 0.35, 0.38, 2.1], ['#f2c14e', 0.5, 0.8, 0.36, 4.2], ['#1f8a70', 0.15, 0.85, 0.3, 1.3]];
+  for (const [col, cx, cy, r, ph] of blobs) {
+    const x = (cx + 0.08 * Math.sin(t * 0.35 + ph)) * w, y = (cy + 0.07 * Math.cos(t * 0.28 + ph * 1.3)) * h;
+    const g = bx.createRadialGradient(x, y, 0, x, y, r * w);
+    g.addColorStop(0, col + 'cc'); g.addColorStop(1, col + '00');
+    bx.fillStyle = g; bx.fillRect(0, 0, w, h);
+  }
+  bx.strokeStyle = 'rgba(17,20,19,0.18)'; bx.lineWidth = 2;
+  for (let x = 0; x <= w; x += 60) { bx.beginPath(); bx.moveTo(x, 0); bx.lineTo(x, h); bx.stroke(); }
+  for (let y = 0; y <= h; y += 60) { bx.beginPath(); bx.moveTo(0, y); bx.lineTo(w, y); bx.stroke(); }
+  bx.fillStyle = '#111413';
+  bx.font = '600 150px system-ui, sans-serif'; bx.fillText('Liquid glass', 90, 330);
+  bx.font = '400 40px system-ui, sans-serif'; bx.fillStyle = '#3b3f42';
+  const lines = ['Fine lines and letters show what the lens does: it bends', 'the edge inward, blurs a little and picks up colour from below.'];
+  lines.forEach((l, i) => bx.fillText(l, 90, 430 + i * 58));
+  bx.font = '500 26px ui-monospace, monospace'; bx.fillStyle = '#6b665e';
+  ['IOR 1.50', 'SQUIRCLE RIM', 'WEBGL2'].forEach((s, i) => bx.fillText(s, w - 330, 90 + i * 46));
+}
+
+// ---- Shapes on springs: x, y are centres in CSS px ----
+const tune = k => (reduced.matches ? SPRINGS_REDUCED : SPRINGS)[k];
+const card = { kind: 'rect', w: 320, h: 200, r: 34, x: new Spring(0, ...tune('move')), y: new Spring(0, ...tune('move')), press: new Spring(0, ...tune('press')) };
+let layoutDone = false;
+function layout() {
+  const r = canvas.getBoundingClientRect();
+  const W = r.width, H = r.height;
+  if (!layoutDone) { card.x.snap(W / 2); card.y.snap(H / 2 - 20); layoutDone = true; }
+  return { W, H };
+}
+function shapes() {
+  const { W, H } = layout();
+  const cardW = Math.min(card.w, W - 32), cardH = Math.min(card.h, H * 0.5);
+  return [
+    { kind: 'rect', x: card.x.x, y: card.y.x, w: cardW, h: cardH, r: card.r, press: Math.max(0, card.press.x) },
+    { kind: 'capsule', x: W / 2 - 34, y: H - 48, w: Math.min(220, W - 120), h: 58 },
+    { kind: 'circle', x: W / 2 + Math.min(220, W - 120) / 2 + 12, y: H - 48, w: 58 },
+  ];
+}
+
+// ---- Dragging ----
+let drag = null;
+const sd = (px, py, hx, hy, r) => { const qx = Math.abs(px) - hx + r, qy = Math.abs(py) - hy + r; return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r; };
+canvas.addEventListener('pointerdown', e => {
+  const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, s = shapes()[0];
+  if (sd(x - s.x, y - s.y, s.w / 2, s.h / 2, s.r) > 4) return;
+  drag = { id: e.pointerId, dx: card.x.t - x, dy: card.y.t - y };
+  card.press.t = 1; canvas.setPointerCapture(e.pointerId); wake();
+});
+canvas.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const r = canvas.getBoundingClientRect();
+  card.x.t = Math.min(r.width, Math.max(0, e.clientX - r.left + drag.dx));
+  card.y.t = Math.min(r.height, Math.max(0, e.clientY - r.top + drag.dy));
+  wake();
+});
+const endDrag = e => { if (drag && e.pointerId === drag.id) { drag = null; card.press.t = 0; wake(); } };
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+
+// ---- Loop: step springs at 120 Hz, draw while something moves ----
+let mode = 'moving', video = null, running = false, last = 0, t0 = performance.now();
+const springs = [card.x, card.y, card.press];
+const busy = () => mode === 'moving' && !reduced.matches || !!video || !!drag || springs.some(s => !s.rest());
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const n = Math.max(1, Math.ceil(dt * 120));
+  for (let i = 0; i < n; i++) for (const s of springs) s.step(dt / n);
+  if (mode === 'moving' && !reduced.matches) drawBackground((now - t0) / 1000);
+  glass.setShapes(shapes());
+  glass.render();
+  if (busy()) requestAnimationFrame(frame); else running = false;
+}
+function wake() { if (!running) { running = true; last = performance.now(); requestAnimationFrame(frame); } }
+
+function useBackground(m) {
+  mode = m;
+  if (video) { video.pause(); URL.revokeObjectURL(video.src); video = null; }
+  drawBackground((performance.now() - t0) / 1000);
+  // A moving canvas is a live source: it's uploaded on every render. A still one is copied once.
+  glass.setSource(bg, { live: m === 'moving' && !reduced.matches }).then(wake);
+  if (m === 'moving' && reduced.matches) say('Your device asks for reduced motion, so the background holds still.');
+}
+$('bg').addEventListener('change', e => useBackground(e.target.value));
+
+$('file').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    if (f.type.startsWith('video/')) {
+      const v = document.createElement('video');
+      v.muted = true; v.loop = true; v.playsInline = true; v.src = URL.createObjectURL(f);
+      await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('This browser can’t play that video.')); });
+      if (video) { video.pause(); URL.revokeObjectURL(video.src); }
+      video = v; mode = 'file';
+      if (!reduced.matches) await v.play().catch(() => {});
+      await glass.setSource(v);
+      say('Showing your video. It stays in this tab.');
+    } else if (f.type.startsWith('image/')) {
+      const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
+      if (video) { video.pause(); URL.revokeObjectURL(video.src); video = null; }
+      mode = 'file';
+      await glass.setSource(bmp); bmp.close();
+      say('Showing your image. It stays in this tab.');
+    } else return say('That isn’t an image or a video.');
+    wake();
+  } catch (err) { say(err.message || 'Couldn’t read that file.'); }
+});
+
+for (const P of PRESETS) $('preset').add(new Option(P.name, P.id));
+$('preset').addEventListener('change', e => { glass.setMaterial(e.target.value); wake(); });
+
+$('save').addEventListener('click', async () => {
+  try {
+    const b = await glass.toBlob();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'glass.png'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  } catch (err) { say(err.message); }
+});
+
+new ResizeObserver(() => { glass.resize(); glass.setShapes(shapes()); glass.render(); }).observe(stage);
+reduced.addEventListener('change', () => { for (const k of ['x', 'y']) [card[k].k, card[k].c] = tune('move'); [card.press.k, card.press.c] = tune('press'); useBackground(mode === 'file' ? 'type' : mode); });
+useBackground('moving');
+window.demo = { glass, card };   // for the smoke test
+</script>
+</body>
+</html>

@@ -20,8 +20,10 @@
   "scripts": {
     "test": "node test/shader-identity.mjs && node test/unit.mjs",
     "check:pixels": "node test/pixels.mjs",
+    "check:demo": "node test/demo-smoke.mjs",
+    "check:react": "node test/react-browser.mjs",
     "check:pack": "node test/pack.mjs",
-    "demo": "node scripts/serve.mjs"
+    "demo": "node scripts/serve.mjs --port 8040"
   },
   "peerDependencies": {
     "react": ">=17"
@@ -31,6 +33,12 @@
       "optional": true
     }
   },
-  "keywords": ["liquid glass", "webgl2", "glass", "refraction", "shader"],
+  "keywords": [
+    "liquid glass",
+    "webgl2",
+    "glass",
+    "refraction",
+    "shader"
+  ],
   "license": "MIT"
 }
