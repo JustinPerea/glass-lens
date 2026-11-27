@@ -7,7 +7,7 @@ glass-lens draws glass shapes (rounded rectangles, capsules and circles) over an
 It isn't on npm. Install it from a git URL or from a tarball made with `npm pack`:
 
 ```sh
-npm install git+https://github.com/<owner>/glass-lens.git
+npm install git+https://github.com/JustinPerea/glass-lens.git
 # or
 npm pack                      # in this repo: writes glass-lens-0.1.0.tgz
 npm install ./glass-lens-0.1.0.tgz
@@ -170,7 +170,7 @@ Not run on React Native or Expo. Routes that might work, none of them tried:
 - **Expo web**: with react-native-web the app runs in a browser, where a DOM `<canvas>` exists, so `GlassCanvas` or `createGlass` would run the same as on any web page.
 - **expo-gl** (native): its `GLView` context extends `WebGL2RenderingContext` per Expo's docs, so the shaders could likely compile. The package would still need a port: it creates its context with `canvas.getContext('webgl2')`, copies and measures the source through 2D canvases, and saves through `canvas.toBlob`. Expo documents that `texImage2D` there takes only `null`, an `ArrayBuffer` or a `{ localUri }` file, and that a frame is presented with `gl.endFrameEXP()`. None of that port exists.
 
-## How it works
+## How the renderer works
 
 Three kinds of pass, each a full-screen triangle:
 
@@ -193,7 +193,7 @@ The Apple preset follows what Apple has published (lensing over scatter, a 35% d
 |---|---|---|
 | `npm test` | Node | The shaders, `MAX_SHAPES`, `UI_MAX`, `PARAMS` and `PRESETS` match hashes recorded from the lab page; materials, springs, the no-WebGL2 error |
 | `LAB_HTML=… npm test` | the lab page | The same, compared directly with the lab's source text |
-| `LAB_HTML=… npm run check:pixels` | the lab page, Chrome, puppeteer | Renders one scene in the lab and in the package and diffs the pixels |
+| `LAB_HTML=… npm run check:pixels` | the lab page, Chrome, puppeteer | Renders seven scenes (four presets, three pixel ratios, a pressed shape, a per-shape material) in the lab and in the package and diffs the pixels |
 | `npm run check:demo` | Chrome, puppeteer | The demo renders, drags, saves, takes an image file and a video |
 | `npm run check:react` | Chrome, puppeteer, network | `GlassCanvas` under React 18 StrictMode |
 | `npm run check:pack` | network | Installs the packed tarball with React and imports both entry points |
@@ -202,7 +202,7 @@ The Apple preset follows what Apple has published (lensing over scatter, a 35% d
 
 ## License
 
-MIT, see LICENSE.
+MIT, see LICENSE. Liquid Glass is Apple's name for its material; this project is not affiliated with or endorsed by Apple.
 
 ## Credits
 
